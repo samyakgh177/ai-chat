@@ -20,18 +20,22 @@ const ChatMessageView = ({ user }: ChatMessageViewProps) => {
 
 
   return (
-    <div className='flex flex-col items-center justify-center h-full space-y-10'>
+    <div className="flex flex-col justify-between h-full max-w-4xl mx-auto w-full px-2 py-4 sm:py-6 overflow-y-auto">
+      <div className="my-auto py-4">
         <ChatWelcomeTabs
-        userName={user?.name}
-        onMessageSelect={handleMessageSelect}
+          userName={user?.name}
+          onMessageSelect={handleMessageSelect}
         />
+      </div>
 
+      <div className="w-full shrink-0 pt-2">
         <ChatMessageForm
-           initialMessage={selectedMessage}
+          initialMessage={selectedMessage}
           onMessageChange={handleMessageChange}
         />
+      </div>
     </div>
-  )
+  );
 }
 
 export default ChatMessageView
