@@ -38,6 +38,8 @@ import {
 } from "@/components/ai-elements/reasoning";
 import { toast } from "sonner";
 import { ChatTopbar } from "./chat-topbar";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { VoiceInputButton } from "@/components/voice-input-button";
 
 
 type DBMessage = {
@@ -172,7 +174,30 @@ const ChatView = ({
   const hasAutoTriggered = useRef(false);
 
   const [selectedModel , setSelectedModel] = useState<string | null>(initialModel);
-   const { data: modelsData, isPending: isModelLoading } = useAIModels();
+  const [inputPrompt, setInputPrompt] = useState("");
+  const { isListening, isSupported, toggleListening, stopListening } = useSpeechRecognition();
+  const basePromptRef = useRef("");
+
+  const handleVoiceToggle = () => {
+    if (!isListening) {
+      basePromptRef.current = inputPrompt.trim();
+    }
+    toggleListening({
+      onTranscript: (spokenText) => {
+        const base = basePromptRef.current;
+        setInputPrompt(base ? `${base} ${spokenText}` : spokenText);
+      },
+    });
+  };
+
+  const { data: modelsData, isPending: isModelLoading } = useAIModels();
+
+  useEffect(() => {
+    if (!selectedModel && modelsData?.models?.length) {
+      const lingModel = (modelsData.models as AIModel[]).find((m: AIModel) => m.id.includes("ling-3.2"));
+      setSelectedModel(lingModel ? lingModel.id : modelsData.models[0].id);
+    }
+  }, [modelsData, selectedModel]);
 
    const currentModel = useMemo(
      () => (modelsData?.models as AIModel[] | undefined)?.find((m: AIModel) => m.id === selectedModel) ?? null,
@@ -239,7 +264,7 @@ const ChatView = ({
 
 
   const handleSubmit = async (message: PromptInputMessage) => {
-    const text = message.text?.trim();
+    const text = (inputPrompt || message.text)?.trim();
     if (!text) return;
     if (!selectedModel) {
       toast.error("Please select a model first");
@@ -247,6 +272,8 @@ const ChatView = ({
     }
 
     if (isBuzy) return;
+    if (isListening) stopListening();
+    setInputPrompt("");
 
     try {
       await sendMessage(
@@ -321,8 +348,10 @@ const ChatView = ({
         <PromptInput onSubmit={handleSubmit} className="mt-4">
           <PromptInputBody>
             <PromptInputTextarea
-              placeholder="Type your message..."
+              placeholder="Type your message or use voice dictation..."
               disabled={isBuzy}
+              value={inputPrompt}
+              onChange={(e) => setInputPrompt(e.target.value)}
             />
           </PromptInputBody>
 
@@ -340,7 +369,15 @@ const ChatView = ({
                   />
                 )}
               </div>
-              <PromptInputSubmit status={status} onStop={stop} />
+              <div className="flex items-center gap-1.5">
+                <VoiceInputButton
+                  isListening={isListening}
+                  isSupported={isSupported}
+                  onToggle={handleVoiceToggle}
+                  disabled={isBuzy}
+                />
+                <PromptInputSubmit status={status} onStop={stop} />
+              </div>
             </PromptInputTools>
           </PromptInputFooter>
         </PromptInput>

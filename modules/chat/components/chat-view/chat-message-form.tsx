@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { useAIModels } from "../../hooks/use-ai-models";
 import { ModelSelector } from "./model-selector";
 import { useCreateChat } from "../../hooks/use-chats";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { VoiceInputButton } from "@/components/voice-input-button";
 
 interface ChatMessageFormProps {
   initialMessage?: string;
@@ -26,10 +28,25 @@ export default function ChatMessageForm({
   );
 
   const { mutateAsync, isPending: isChatPending } = useCreateChat();
+  const { isListening, isSupported, toggleListening } = useSpeechRecognition();
+  const baseMessageRef = React.useRef("");
+
+  const handleVoiceToggle = () => {
+    if (!isListening) {
+      baseMessageRef.current = message.trim();
+    }
+    toggleListening({
+      onTranscript: (spokenText) => {
+        const base = baseMessageRef.current;
+        setMessage(base ? `${base} ${spokenText}` : spokenText);
+      },
+    });
+  };
 
   useEffect(() => {
-    if (!selectedModel && models?.models?.[0]?.id) {
-      setSelectedModel(models.models[0].id);
+    if (!selectedModel && models?.models?.length) {
+      const lingModel = models.models.find((m: { id: string }) => m.id.includes("ling-3.2"));
+      setSelectedModel(lingModel ? lingModel.id : models.models[0].id);
     }
   }, [models, selectedModel]);
 
@@ -97,27 +114,34 @@ export default function ChatMessageForm({
               )}
             </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={!message.trim()}
-              size="sm"
-              variant={message.trim() ? "default" : "ghost"}
-              className="h-8 w-8 p-0 rounded-full "
-              aria-label="Send message"
-              title={
-                message.trim() ? "Send message" : "Enter a message to enable"
-              }
-            >
-              {isChatPending ? (
-                <Spinner />
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  <span className="sr-only">Send message</span>
-                </>
-              )}
-            </Button>
+            {/* Right side controls */}
+            <div className="flex items-center gap-1.5">
+              <VoiceInputButton
+                isListening={isListening}
+                isSupported={isSupported}
+                onToggle={handleVoiceToggle}
+              />
+              <Button
+                type="submit"
+                disabled={!message.trim()}
+                size="sm"
+                variant={message.trim() ? "default" : "ghost"}
+                className="h-8 w-8 p-0 rounded-full"
+                aria-label="Send message"
+                title={
+                  message.trim() ? "Send message" : "Enter a message to enable"
+                }
+              >
+                {isChatPending ? (
+                  <Spinner />
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    <span className="sr-only">Send message</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </form>
