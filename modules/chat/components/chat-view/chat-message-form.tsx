@@ -30,7 +30,6 @@ export default function ChatMessageForm({
   const { mutateAsync, isPending: isChatPending } = useCreateChat();
   const { isListening, isSupported, toggleListening } = useSpeechRecognition();
   const baseMessageRef = React.useRef("");
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   const handleVoiceToggle = () => {
     if (!isListening) {
@@ -55,9 +54,6 @@ export default function ChatMessageForm({
     if (initialMessage) {
       setMessage(initialMessage);
       onMessageChange?.("");
-      setTimeout(() => {
-        textareaRef.current?.focus();
-      }, 50);
     }
   }, [initialMessage, onMessageChange]);
 
@@ -88,7 +84,6 @@ export default function ChatMessageForm({
         <div className="relative rounded-2xl border border-border shadow-sm   transition-all">
           {/* Textarea */}
           <Textarea
-            ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type your message here..."
