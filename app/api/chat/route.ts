@@ -2,12 +2,14 @@ import { convertToModelMessages, streamText , createIdGenerator , type UIMessage
 import { CHAT_SYSTEM_PROMPT } from "@/lib/prompt";
 import { prisma } from "@/lib/db";
 import { MessageRole } from "@/lib/generated/prisma/enums";
+import { currentUser } from "@/modules/authentication/actions";
 
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { NextRequest } from "next/server";
 
+const apiKey = process.env.OPENROUTER_API_KEY || "";
 const openRouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
+  apiKey,
 });
 
 /**
@@ -48,10 +50,21 @@ function partsToJSON(message: { parts?: unknown; content?: string }) {
   return JSON.stringify([{ type: "text", text: message.content ?? "" }]);
 }
 
-
-
 export async function POST(req: NextRequest) {
   try {
+    if (!apiKey) {
+      return Response.json(
+        { error: "OpenRouter API key is not configured. Please set OPENROUTER_API_KEY in your environment." },
+        { status: 500 }
+      );
+    }
+
+    // Safety Guardrail 1: Authenticate the user
+    const user = await currentUser();
+    if (!user) {
+      return Response.json({ error: "Unauthorized. Please sign in." }, { status: 401 });
+    }
+
     const {
       chatId,
       messages,
@@ -59,7 +72,62 @@ export async function POST(req: NextRequest) {
       skipUserMessage,
     } = await req.json();
 
-  
+    // Safety Guardrail 2: Input validation
+    if (!chatId || typeof chatId !== "string") {
+      return Response.json({ error: "Missing or invalid chatId" }, { status: 400 });
+    }
+
+    if (!model || typeof model !== "string") {
+      return Response.json({ error: "Missing or invalid model identifier" }, { status: 400 });
+    }
+
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return Response.json({ error: "Messages payload cannot be empty" }, { status: 400 });
+    }
+
+    if (messages.length > 80) {
+      return Response.json(
+        { error: "Conversation history exceeds safety limit (max 80 messages)." },
+        { status: 400 }
+      );
+    }
+
+    // Safety Guardrail 3: Chat ownership check
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, userId: user.id },
+    });
+
+    if (!chat) {
+      return Response.json(
+        { error: "Chat not found or access denied." },
+        { status: 404 }
+      );
+    }
+
+    // Safety Guardrail 4: Prompt length cap (prevent budget drain)
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    if (lastUserMsg) {
+      let promptLength = 0;
+      if (Array.isArray(lastUserMsg.parts)) {
+        for (const p of lastUserMsg.parts) {
+          if (p?.type === "text" && typeof p.text === "string") {
+            promptLength += p.text.length;
+          }
+        }
+      } else if (typeof lastUserMsg.content === "string") {
+        promptLength = lastUserMsg.content.length;
+      }
+
+      const MAX_PROMPT_CHARS = 12000;
+      if (promptLength > MAX_PROMPT_CHARS) {
+        return Response.json(
+          {
+            error: `Message exceeds the maximum safety limit of ${MAX_PROMPT_CHARS.toLocaleString()} characters.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     const result = streamText({
       model: openRouter.chat(model),

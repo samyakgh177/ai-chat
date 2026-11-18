@@ -6,7 +6,8 @@ import UserButton from "@/modules/authentication/components/user-button";
 import { PlusIcon, SearchIcon, EllipsisIcon, Trash } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { isToday, isYesterday, isWithinInterval, subDays } from "date-fns";
 import {
   DropdownMenu,
@@ -139,21 +140,37 @@ const ChatSidebar = ({ user }: ChatSidebarProps) => {
     : null;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedQuery = useDebounce(searchQuery.trim().toLowerCase(), 200);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
- 
+
+  // Keyboard shortcut: Cmd+K or Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const filteredChats = useMemo(() => {
-    if (!searchQuery) return chats;
-    const query = searchQuery.toLowerCase();
+    if (!debouncedQuery) return chats;
+    const tokens = debouncedQuery.split(/\s+/).filter(Boolean);
 
-    return chats.filter(
-      (chat: any) =>
-        chat.title?.toLowerCase().includes(query) ||
-        chat.messages?.some((msg: any) =>
-          msg.content?.toLowerCase().includes(query),
-        ),
-    );
-  }, [searchQuery, chats]);
+    return chats.filter((chat: any) => {
+      const titleLower = chat.title?.toLowerCase() || "";
+      const messagesCombined = Array.isArray(chat.messages)
+        ? chat.messages.map((m: any) => m.content?.toLowerCase() || "").join(" ")
+        : "";
+      const haystack = `${titleLower} ${messagesCombined}`;
+
+      // Multi-token match: all keywords must appear in either title or message
+      return tokens.every((token) => haystack.includes(token));
+    });
+  }, [debouncedQuery, chats]);
 
   const groupedChats = useMemo(() => {
     const result = groupChatsByDate(filteredChats);
@@ -192,21 +209,32 @@ const ChatSidebar = ({ user }: ChatSidebarProps) => {
         <div className="relative">
           <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search your threads..."
-            className="pl-9 pr-8 bg-sidebar-accent border-sidebar-border"
+            ref={searchInputRef}
+            placeholder="Search threads..."
+            className="pl-9 pr-12 bg-sidebar-accent border-sidebar-border text-xs"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
 
-          {searchQuery && (
+          {searchQuery ? (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm"
+              aria-label="Clear search"
             >
               ×
             </button>
+          ) : (
+            <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
+              ⌘K
+            </kbd>
           )}
         </div>
+        {debouncedQuery && (
+          <div className="mt-2 px-1 text-[11px] text-muted-foreground">
+            {filteredChats.length} {filteredChats.length === 1 ? "result" : "results"} found
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-2">

@@ -25,7 +25,7 @@ import {
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 
-import { ModelSelector } from "../chat-view/model-selector";
+import { ModelSelector, type AIModel } from "../chat-view/model-selector";
 import {
   Message,
   MessageContent,
@@ -37,6 +37,7 @@ import {
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
 import { toast } from "sonner";
+import { ChatTopbar } from "./chat-topbar";
 
 
 type DBMessage = {
@@ -147,6 +148,7 @@ export const MessageViewWithForm = ({ chatId }: {chatId:string}) => {
  return (
   <ChatView
   chatId={chatId}
+  chatTitle={chatData.data.title || "Conversation"}
   initialMessages={initialMessages}
   initialModel={chatData.data.model}
   />
@@ -155,10 +157,12 @@ export const MessageViewWithForm = ({ chatId }: {chatId:string}) => {
 
 const ChatView = ({
   chatId,
+  chatTitle,
   initialMessages,
   initialModel,
 }:{
    chatId: string;
+  chatTitle: string;
   initialMessages: UIMessage[];
   initialModel: string | null;
 })=>{
@@ -169,6 +173,11 @@ const ChatView = ({
 
   const [selectedModel , setSelectedModel] = useState<string | null>(initialModel);
    const { data: modelsData, isPending: isModelLoading } = useAIModels();
+
+   const currentModel = useMemo(
+     () => (modelsData?.models as AIModel[] | undefined)?.find((m: AIModel) => m.id === selectedModel) ?? null,
+     [modelsData, selectedModel]
+   );
 
    const transport = useMemo(
     () =>
@@ -258,8 +267,13 @@ const ChatView = ({
 
 
   return (
-    <div className="max-w-4xl mx-auto p-6 relative size-full h-full">
-      <div className="flex flex-col h-full">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 relative size-full h-full flex flex-col">
+      <ChatTopbar
+        chatTitle={chatTitle}
+        modelInfo={currentModel}
+        messages={messages}
+      />
+      <div className="flex-1 min-h-0 flex flex-col pt-3">
         <Conversation className="h-full">
           <ConversationContent>
             {messages.length === 0 ? (
