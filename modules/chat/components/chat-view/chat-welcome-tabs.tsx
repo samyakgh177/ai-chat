@@ -49,13 +49,21 @@ const CHAT_TAB_MESSAGE = [
 ];
 
 
-const ChatWelcomeTabs = ({userName="John Doe" , onMessageSelect} ) => {
+interface ChatWelcomeTabsProps {
+  userName?: string | null;
+  onMessageSelect: (message: string) => void;
+}
+
+const ChatWelcomeTabs = ({
+  userName = "John Doe",
+  onMessageSelect,
+}: ChatWelcomeTabsProps) => {
     const [activeTab , setActiveTab] = useState(0)
   return (
    <div className="flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-3xl space-y-8">
         <h1 className="text-4xl font-semibold">
-          How can I help you, {userName.slice(0, userName.indexOf(" ")) || userName}?
+          How can I help you, {userName?.trim().split(" ")[0] || userName}?
         </h1>
 
         <div className="flex flex-wrap gap-2 w-full">

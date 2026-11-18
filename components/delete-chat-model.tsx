@@ -5,24 +5,30 @@ import { useDeleteChat } from "@/modules/chat/hooks/use-chats";
 import React from "react";
 import { toast } from "sonner";
 
+interface DeleteChatModelProps {
+  isModalOpen: boolean;
+  setIsModalOpen: (open: boolean) => void;
+  chatId: string | null;
+}
+
 const DeleteChatModel = ({
-    isModalOpen,
-    setIsModalOpen,
-    chatId,
-}) => {
+  isModalOpen,
+  setIsModalOpen,
+  chatId,
+}: DeleteChatModelProps) => {
+  const { mutateAsync, isPending } = useDeleteChat(chatId || "");
 
-    const {mutateAsync ,isPending} = useDeleteChat(chatId);
-
-    const handleDelete = async()=>{
-        try {
-            await mutateAsync();
-                toast.success("Chat deleted successfully");
-                setIsModalOpen(false);
-        } catch (error) {
-              toast.error("Failed to delete Chat");
-      console.error("Failed to delete Chat:", err);
-        }
+  const handleDelete = async () => {
+    if (!chatId) return;
+    try {
+      await mutateAsync();
+      toast.success("Chat deleted successfully");
+      setIsModalOpen(false);
+    } catch (error) {
+      toast.error("Failed to delete Chat");
+      console.error("Failed to delete Chat:", error);
     }
+  };
 
   return (
     <Modal

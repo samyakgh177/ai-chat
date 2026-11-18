@@ -13,10 +13,10 @@ const openRouter = createOpenRouter({
 /**
  * Convert DB message to UI format for AI SDK
  */
-function dbMessageToUI(msg) {
+function dbMessageToUI(msg: any) {
   try {
     const parts = JSON.parse(msg.content);
-    const textParts = parts.filter((p) => p.type === "text");
+    const textParts = parts.filter((p: any) => p.type === "text");
 
     if (textParts.length === 0) return null;
 

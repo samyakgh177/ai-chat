@@ -1,6 +1,8 @@
 import { MessageViewWithForm } from "@/modules/chat/components/messages/message-view-form";
 import React from "react";
 
+export const instant = false;
+
 const ChatIdPage = async ({
   params,
 }: {

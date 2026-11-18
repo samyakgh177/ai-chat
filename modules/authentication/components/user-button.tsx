@@ -19,6 +19,25 @@ import { useRouter } from "next/navigation";
 
 
 
+interface UserButtonProps {
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    createdAt?: Date | string;
+  } | null;
+  onLogout?: () => void;
+  onSettings?: () => void;
+  onProfile?: () => void;
+  onBilling?: () => void;
+  showBadge?: boolean;
+  badgeText?: string;
+  badgeVariant?: "default" | "secondary" | "destructive" | "outline";
+  size?: "sm" | "md" | "lg";
+  showEmail?: boolean;
+  showMemberSince?: boolean;
+}
+
 export default function UserButton({
   user,
   onLogout,
@@ -31,35 +50,37 @@ export default function UserButton({
   size = "md",
   showEmail = true,
   showMemberSince = true,
-}) {
+}: UserButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-   const onSignOut = async()=>{
+  const onSignOut = async () => {
     await authClient.signOut({
-      fetchOptions:{
-        onSuccess:()=>{
-          router.push("/sign-in")
-        }
-      }
-    })
-  }
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/sign-in");
+        },
+      },
+    });
+  };
 
   const handleLogout = async () => {
-  
-      setIsLoading(true);
-      try {
+    setIsLoading(true);
+    try {
+      if (onLogout) {
+        onLogout();
+      } else {
         await onSignOut();
-      } catch (error) {
-        console.error("Logout error:", error);
-      } finally {
-        setIsLoading(false);
       }
-    
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Get user initials for avatar fallback
-  const getUserInitials = (name, email) => {
+  const getUserInitials = (name?: string | null, email?: string | null) => {
     if (name) {
       return name
         .split(" ")
@@ -75,7 +96,8 @@ export default function UserButton({
   };
 
   // Format member since date
-  const formatMemberSince = (date) => {
+  const formatMemberSince = (date?: Date | string) => {
+    if (!date) return "";
     return new Intl.DateTimeFormat("en-US", {
       month: "long",
       year: "numeric",
@@ -83,7 +105,7 @@ export default function UserButton({
   };
 
   // Avatar sizes
-  const avatarSizes = {
+  const avatarSizes: Record<"sm" | "md" | "lg", string> = {
     sm: "h-8 w-8",
     md: "h-10 w-10",
     lg: "h-12 w-12",
@@ -121,8 +143,8 @@ export default function UserButton({
           )}
         </Button>
       </DropdownMenuTrigger>
-      
-      <DropdownMenuContent className="w-64" align="end" forceMount>
+
+      <DropdownMenuContent className="w-64" align="end">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-2">
             <div className="flex items-center space-x-3">

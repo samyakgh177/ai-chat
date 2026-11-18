@@ -10,30 +10,53 @@ import { useAIModels } from "../../hooks/use-ai-models";
 import { ModelSelector } from "./model-selector";
 import { useCreateChat } from "../../hooks/use-chats";
 
-export default function ChatMessageForm({ initialMessage, onMessageChange }) {
+interface ChatMessageFormProps {
+  initialMessage?: string;
+  onMessageChange?: (msg: string) => void;
+}
+
+export default function ChatMessageForm({
+  initialMessage,
+  onMessageChange,
+}: ChatMessageFormProps) {
   const { data: models, isPending } = useAIModels();
   const [message, setMessage] = useState("");
-  const [selectedModel, setSelectedModel] = useState(models?.models[0].id);
+  const [selectedModel, setSelectedModel] = useState<string | undefined>(
+    models?.models?.[0]?.id
+  );
 
   const { mutateAsync, isPending: isChatPending } = useCreateChat();
 
-  useEffect(()=>{
-      if (initialMessage) {
+  useEffect(() => {
+    if (!selectedModel && models?.models?.[0]?.id) {
+      setSelectedModel(models.models[0].id);
+    }
+  }, [models, selectedModel]);
+
+  useEffect(() => {
+    if (initialMessage) {
       setMessage(initialMessage);
       onMessageChange?.("");
     }
-  },[initialMessage, onMessageChange])
+  }, [initialMessage, onMessageChange]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+
+    const modelToUse = selectedModel || models?.models?.[0]?.id;
+    if (!modelToUse) {
+      toast.error("Please select a model first");
+      return;
+    }
+
     try {
-      e.preventDefault();
-      await mutateAsync({ content: message, model: selectedModel });
+      await mutateAsync({ content: message.trim(), model: modelToUse });
       toast.success("Message sent successfully");
+      setMessage("");
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message");
-    } finally {
-      setMessage("");
     }
   };
 

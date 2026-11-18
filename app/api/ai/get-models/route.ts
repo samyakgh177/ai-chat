@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 
 export async function GET(request: NextRequest) {
+  await connection();
   try {
     const response = await fetch("https://openrouter.ai/api/v1/models", {
       method: "GET",
@@ -19,14 +20,14 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
 
-    const freeModels = data.data.filter((model) => {
+    const freeModels = (data.data || []).filter((model: any) => {
       const promptPrice = parseFloat(model.pricing?.prompt || "0");
       const completionPrice = parseFloat(model.pricing?.completion || "0");
 
       return promptPrice === 0 && completionPrice === 0;
     });
 
-    const formattedModels = freeModels.map((model) => ({
+    const formattedModels = freeModels.map((model: any) => ({
       id: model.id,
       name: model.name,
       description: model.description,

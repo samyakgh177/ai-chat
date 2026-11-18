@@ -20,7 +20,7 @@ import { useGetChats } from "../hooks/use-chats";
 import { Spinner } from "@/components/ui/spinner";
 
 function groupChatsByDate(chats: any) {
-  const groups = { today: [], yesterday: [], lastWeek: [], older: [] };
+  const groups: Record<string, any[]> = { today: [], yesterday: [], lastWeek: [], older: [] };
   const now = new Date();
 
   if (!chats || !Array.isArray(chats)) return groups;
@@ -57,7 +57,13 @@ const DATE_GROUPS = [
   { key: "older", label: "Older" },
 ];
 
-function ChatItem({ chat, isActive, onDelete }) {
+interface ChatItemProps {
+  chat: any;
+  isActive: boolean;
+  onDelete: (e: React.MouseEvent, chatId: string) => void;
+}
+
+function ChatItem({ chat, isActive, onDelete }: ChatItemProps) {
   return (
     <Link
       href={`/chat/${chat.id}`}
@@ -92,7 +98,14 @@ function ChatItem({ chat, isActive, onDelete }) {
   );
 }
 
-function ChatGroup({ label, chats, activeChatId, onDelete }) {
+interface ChatGroupProps {
+  label: string;
+  chats: any[];
+  activeChatId: string | null;
+  onDelete: (e: React.MouseEvent, chatId: string) => void;
+}
+
+function ChatGroup({ label, chats, activeChatId, onDelete }: ChatGroupProps) {
   if (chats.length === 0) return null;
 
   return (
@@ -100,7 +113,7 @@ function ChatGroup({ label, chats, activeChatId, onDelete }) {
       <div className="mb-2 px-2 text-xs font-semibold text-muted-foreground">
         {label}
       </div>
-      {chats.map((chat) => (
+      {chats.map((chat: any) => (
         <ChatItem
           key={chat.id}
           chat={chat}
@@ -112,7 +125,11 @@ function ChatGroup({ label, chats, activeChatId, onDelete }) {
   );
 }
 
-const ChatSidebar = ({ user }) => {
+interface ChatSidebarProps {
+  user: any;
+}
+
+const ChatSidebar = ({ user }: ChatSidebarProps) => {
    const { data: chats = [], isPending } = useGetChats();
 
    console.log("Fetched chats:", chats);
@@ -158,8 +175,8 @@ const ChatSidebar = ({ user }) => {
   return (
     <div className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
       {/* Header */}
-      <div className="flex items-center border-b border-sidebar-border px-4 py-3">
-        <Image src="/logo.svg" alt="Logo" width={100} height={100} />
+      <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+        <Image src="/logo.svg" alt="NexusChat" width={128} height={32} className="h-8 w-auto text-foreground" priority />
       </div>
 
       <div className="p-4">

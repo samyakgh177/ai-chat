@@ -53,7 +53,7 @@ type MessagePartShape = {
 };
 
 
-function parseMessageToUI(msg) {
+function parseMessageToUI(msg: any) {
   const basePart = { type: "text", text: msg.content };
 
   try {
@@ -229,35 +229,36 @@ const ChatView = ({
   ]);
 
 
-  const handleSubmit = async(message:PromptInputMessage)=>{
+  const handleSubmit = async (message: PromptInputMessage) => {
     const text = message.text?.trim();
-    if(!text) return;
-    if(!selectedModel){
-      toast.error("Please select a model first")
+    if (!text) return;
+    if (!selectedModel) {
+      toast.error("Please select a model first");
+      return;
     }
 
-    if(isBuzy) return;
+    if (isBuzy) return;
 
     try {
       await sendMessage(
-        {text},
+        { text },
         {
-          body:{
+          body: {
             chatId,
-            model:selectedModel,
-            skipUserMessage:false
-          }
+            model: selectedModel,
+            skipUserMessage: false,
+          },
         }
-      )
+      );
     } catch (error) {
-        console.error("Send message failed:", err);
+      console.error("Send message failed:", error);
       toast.error("Failed to send message");
     }
-  }
+  };
 
 
   return (
-     <div className="max-w-4xl mx-auto p-6 relative size-full h-[calc(100vh-4rem)]">
+    <div className="max-w-4xl mx-auto p-6 relative size-full h-full">
       <div className="flex flex-col h-full">
         <Conversation className="h-full">
           <ConversationContent>

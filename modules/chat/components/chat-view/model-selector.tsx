@@ -20,49 +20,75 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
+export interface AIModel {
+  id: string;
+  name: string;
+  description?: string;
+  context_length?: number;
+  architecture?: {
+    modality?: string;
+    tokenizer?: string;
+    input_modalities?: string[];
+    output_modalities?: string[];
+  };
+  pricing?: Record<string, string>;
+  top_provider?: {
+    max_completion_tokens?: number | null;
+    is_moderated?: boolean;
+  };
+}
+
+interface ModelSelectorProps {
+  models?: AIModel[];
+  selectedModelId?: string | null;
+  onModelSelect: (modelId: string) => void;
+  className?: string;
+}
+
 export function ModelSelector({
-  models,
+  models = [],
   selectedModelId,
   onModelSelect,
   className,
-}) {
-    const [open , setOpen] = useState(false);
-    const [detailsOpen , setDetailsOpen] = useState(false);
-    const [selectedForDetails , setSelectedForDetails] = useState(null);
-    const [searchQuery , setSearchQuery] = useState("");
+}: ModelSelectorProps) {
+  const [open, setOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedForDetails, setSelectedForDetails] = useState<AIModel | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-      const selectedModel = models.find((m) => m.id === selectedModelId);
+  const safeModels = models ?? [];
+  const selectedModel = safeModels.find((m) => m.id === selectedModelId);
 
-  const formatContextLength = (length) => {
+  const formatContextLength = (length?: number | null) => {
+    if (!length) return "N/A";
     if (length >= 1000000) return `${(length / 1000000).toFixed(1)}M`;
     if (length >= 1000) return `${(length / 1000).toFixed(0)}K`;
     return length.toString();
   };
 
-    const isFreeModel = (model) => {
+  const isFreeModel = (model: AIModel) => {
     return (
-      model.pricing.prompt === "0" &&
-      model.pricing.completion === "0" &&
-      model.pricing.request === "0"
+      model.pricing?.prompt === "0" &&
+      model.pricing?.completion === "0" &&
+      model.pricing?.request === "0"
     );
   };
 
-  
-  const openModelDetails = (model, e) => {
+  const openModelDetails = (model: AIModel, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedForDetails(model);
     setDetailsOpen(true);
   };
 
-      const filteredModels = models.filter((model) => {
-    const query = searchQuery.toLowerCase()
+  const filteredModels = safeModels.filter((model) => {
+    const query = searchQuery.toLowerCase();
     return (
-      model.name.toLowerCase().includes(query) ||
-      model.description.toLowerCase().includes(query) ||
-      model.id.toLowerCase().includes(query) ||
-      model.architecture.modality.toLowerCase().includes(query)
-    )
-  })
+      model.name?.toLowerCase().includes(query) ||
+      model.description?.toLowerCase().includes(query) ||
+      model.id?.toLowerCase().includes(query) ||
+      model.architecture?.modality?.toLowerCase().includes(query)
+    );
+  });
 
 
   return (
@@ -106,7 +132,7 @@ export function ModelSelector({
               </div>
               {filteredModels.length === 0 ? (
                 <div className="px-2 py-8 text-center text-sm text-muted-foreground">
-                  No models found matching "{searchQuery}"
+                  No models found matching &quot;{searchQuery}&quot;
                 </div>
               ) : (
                 filteredModels.map((model) => (
@@ -137,8 +163,12 @@ export function ModelSelector({
                       <p className="text-xs text-muted-foreground line-clamp-2">{model.description}</p>
                       <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                         <span>Context: {formatContextLength(model.context_length)}</span>
-                        <span>•</span>
-                        <span className="capitalize">{model.architecture.modality.replace("->", " → ")}</span>
+                        {model.architecture?.modality && (
+                          <>
+                            <span>•</span>
+                            <span className="capitalize">{model.architecture.modality.replace("->", " → ")}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <Button
@@ -190,55 +220,68 @@ export function ModelSelector({
                         {formatContextLength(selectedForDetails.context_length)} tokens
                       </p>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Max Completion Tokens</p>
-                      <p className="text-sm font-medium">
-                        {formatContextLength(selectedForDetails.top_provider.max_completion_tokens)} tokens
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Modality</p>
-                      <p className="text-sm font-medium capitalize">
-                        {selectedForDetails.architecture.modality.replace("->", " → ")}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Tokenizer</p>
-                      <p className="text-sm font-medium">{selectedForDetails.architecture.tokenizer}</p>
-                    </div>
+                    {selectedForDetails.top_provider?.max_completion_tokens != null && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Max Completion Tokens</p>
+                        <p className="text-sm font-medium">
+                          {formatContextLength(selectedForDetails.top_provider.max_completion_tokens)} tokens
+                        </p>
+                      </div>
+                    )}
+                    {selectedForDetails.architecture?.modality && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Modality</p>
+                        <p className="text-sm font-medium capitalize">
+                          {selectedForDetails.architecture.modality.replace("->", " → ")}
+                        </p>
+                      </div>
+                    )}
+                    {selectedForDetails.architecture?.tokenizer && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Tokenizer</p>
+                        <p className="text-sm font-medium">{selectedForDetails.architecture.tokenizer}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <Separator />
 
                 {/* Input/Output Modalities */}
-                <div>
-                  <h3 className="text-sm font-semibold mb-3">Supported Modalities</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">Input Modalities</p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedForDetails.architecture.input_modalities.map((modality) => (
-                          <Badge key={modality} variant="outline" className="text-xs">
-                            {modality}
-                          </Badge>
-                        ))}
+                {selectedForDetails.architecture && (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold mb-3">Supported Modalities</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {selectedForDetails.architecture.input_modalities && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">Input Modalities</p>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedForDetails.architecture.input_modalities.map((modality) => (
+                                <Badge key={modality} variant="outline" className="text-xs">
+                                  {modality}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {selectedForDetails.architecture.output_modalities && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">Output Modalities</p>
+                            <div className="flex flex-wrap gap-1">
+                              {selectedForDetails.architecture.output_modalities.map((modality) => (
+                                <Badge key={modality} variant="outline" className="text-xs">
+                                  {modality}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">Output Modalities</p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedForDetails.architecture.output_modalities.map((modality) => (
-                          <Badge key={modality} variant="outline" className="text-xs">
-                            {modality}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
+                    <Separator />
+                  </>
+                )}
 
                 {/* Pricing */}
                 <div>
@@ -250,7 +293,7 @@ export function ModelSelector({
                       </Badge>
                       <p className="text-sm text-muted-foreground">This model is completely free to use</p>
                     </div>
-                  ) : (
+                  ) : selectedForDetails.pricing ? (
                     <div className="grid grid-cols-2 gap-3">
                       {Object.entries(selectedForDetails.pricing).map(([key, value]) => {
                         if (value === "0") return null
@@ -262,23 +305,28 @@ export function ModelSelector({
                         )
                       })}
                     </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Pricing unavailable</p>
                   )}
                 </div>
 
-                <Separator />
-
-                {/* Provider Info */}
-                <div>
-                  <h3 className="text-sm font-semibold mb-3">Provider Information</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Content Moderation</span>
-                      <Badge variant={selectedForDetails.top_provider.is_moderated ? "default" : "secondary"}>
-                        {selectedForDetails.top_provider.is_moderated ? "Enabled" : "Disabled"}
-                      </Badge>
+                {selectedForDetails.top_provider && (
+                  <>
+                    <Separator />
+                    {/* Provider Info */}
+                    <div>
+                      <h3 className="text-sm font-semibold mb-3">Provider Information</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Content Moderation</span>
+                          <Badge variant={selectedForDetails.top_provider.is_moderated ? "default" : "secondary"}>
+                            {selectedForDetails.top_provider.is_moderated ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
 
                 {/* Model ID */}
                 <div>

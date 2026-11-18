@@ -2,7 +2,6 @@
 import { prisma } from "@/lib/db";
 import { MessageRole, MessageType } from "@/lib/generated/prisma/enums";
 import { currentUser } from "@/modules/authentication/actions";
-import { success } from "better-auth";
 import { revalidatePath } from "next/cache";
 
 interface IcreateChatWithMessage {
@@ -27,7 +26,7 @@ export async function createChatWithMessage({
       data: {
         title,
         model,
-        userId: user?.id,
+        userId: user.id,
         messages: {
           create: {
             content,
@@ -59,8 +58,12 @@ export async function getAllChats() {
     }
 
     const chats = await prisma.chat.findMany({
-      where: { userId: user?.id },
-      include: { messages: true },
+      where: { userId: user.id },
+      include: {
+        messages: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
     return { success: true, data: chats };
@@ -78,9 +81,13 @@ export async function getChatById(chatId: string) {
       return { success: false, message: "Unauthorized" };
     }
 
-    const chat = await prisma.chat.findUnique({
-      where: { id: chatId, userId: user?.id },
-      include: { messages: true },
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, userId: user.id },
+      include: {
+        messages: {
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
 
     return { success: true, data: chat };
@@ -90,8 +97,7 @@ export async function getChatById(chatId: string) {
   }
 }
 
-
-export async function deleteChat(chatId:string){
+export async function deleteChat(chatId: string) {
   try {
     const user = await currentUser();
 
@@ -99,19 +105,19 @@ export async function deleteChat(chatId:string){
       return { success: false, message: "Unauthorized" };
     }
 
-    const chat = await prisma.chat.delete({
-      where: { id: chatId, userId: user?.id },
-    
+    const result = await prisma.chat.deleteMany({
+      where: { id: chatId, userId: user.id },
     });
 
-    if(!chat) {
-        return {
-            success:false,
-            message:"Chat not found"
-        }
+    if (result.count === 0) {
+      return {
+        success: false,
+        message: "Chat not found",
+      };
     }
 
-    return { success: true};
+    revalidatePath("/", "page");
+    return { success: true };
   } catch (error) {
     console.error("Error deleting chat:", error);
     return { success: false, message: "Failed to delete chat" };
