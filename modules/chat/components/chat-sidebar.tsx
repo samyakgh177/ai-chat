@@ -19,6 +19,7 @@ import { usePathname } from "next/navigation";
 import DeleteChatModel from "@/components/delete-chat-model";
 import { useGetChats } from "../hooks/use-chats";
 import { Spinner } from "@/components/ui/spinner";
+import { Logo } from "@/components/logo";
 
 function groupChatsByDate(chats: any) {
   const groups: Record<string, any[]> = { today: [], yesterday: [], lastWeek: [], older: [] };
@@ -193,7 +194,7 @@ const ChatSidebar = ({ user }: ChatSidebarProps) => {
     <div className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
       {/* Header */}
       <div className="flex h-14 items-center border-b border-sidebar-border px-4">
-        <Image src="/logo.svg" alt="NexusChat" width={128} height={32} className="h-8 w-auto text-foreground" priority />
+        <Logo href="/" size="md" />
       </div>
 
       <div className="p-4">

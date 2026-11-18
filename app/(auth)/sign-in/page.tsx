@@ -8,6 +8,7 @@ import { Sparkles, ArrowRight, ShieldCheck } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Logo } from "@/components/logo";
 
 const SignInPage = () => {
   const [isGuestLoading, setIsGuestLoading] = useState(false);
@@ -77,16 +78,7 @@ const SignInPage = () => {
         </Badge>
 
         {/* Branding */}
-        <div className="flex flex-row justify-center items-center gap-x-2.5">
-          <Image
-            src="/logo.svg"
-            alt="NexusChat"
-            width={160}
-            height={40}
-            className="h-10 w-auto"
-            priority
-          />
-        </div>
+        <Logo size="lg" />
 
         <p className="mt-3 text-center text-sm md:text-base text-muted-foreground max-w-xs">
           A multi-model AI conversational platform with real-time token tracking and conversation search.
